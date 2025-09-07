@@ -1,7 +1,7 @@
 import mysql.connector
 
 
-def stream_user():
+def stream_users():
     connection = mysql.connector.connect(
             host='localhost',
             database='ALX_prodev',

@@ -9,12 +9,8 @@ def stream_users_in_batches(batch_size):
         )
     cursor = connection.cursor(buffered=False)
     cursor.execute("SELECT user_id, name, email, age FROM user_data ORDER BY user_id")
-    while True:
-        batch = cursor.fetchmany(batch_size)
-        # Convert batch to list of dictionaries    
-        if not batch:
-            break    
-        yield batch
+    data = cursor.fetchall()
+    return data
 
 
 def batch_processing(batch_size):
