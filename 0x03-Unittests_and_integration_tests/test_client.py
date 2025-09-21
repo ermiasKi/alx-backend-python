@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import fixtures
 import unittest
 from client import GithubOrgClient
