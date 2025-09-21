@@ -5,7 +5,7 @@ import uuid
 # Create your models here.
 
 
-class user(models.Model):
+class User(models.Model):
     ROLES = [
         ('guest', 'guest'),
         ('admin', 'admin'),
@@ -19,6 +19,7 @@ class user(models.Model):
     first_name = models.CharField(max_length=150, null=False, blank=False)
     last_name = models.CharField(max_length=150, null=False, blank=False)
     email = models.EmailField(unique=True, null=False, blank=False)
+    password = models.CharField(max_length=30, null=False, blank=False)
 
     class Meta:
         db_table = 'user'
@@ -34,9 +35,9 @@ class user(models.Model):
 
 
 
-class conversation(models.Model):
+class Conversation(models.Model):
     conversation_id = models.UUIDField(primary_key=True, default=uuid.uuid4, db_index=True)
-    participants_id = models.ForeignKey(user, on_delete=models.CASCADE)
+    participants_id = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -45,9 +46,9 @@ class conversation(models.Model):
 
 
 
-class message(models.Model):
+class Message(models.Model):
     message_id = models.UUIDField(primary_key=True, default=uuid.uuid4, db_index=True)
-    sender_id = models.ForeignKey(user, on_delete=models.CASCADE)
+    sender_id = models.ForeignKey(User, on_delete=models.CASCADE)
     message_body = models.TextField(null=False)
     sent_at = models.DateTimeField(auto_now_add=True)
 
