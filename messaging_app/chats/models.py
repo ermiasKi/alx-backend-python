@@ -1,56 +1,41 @@
-from django.contrib.auth.models import AbstractUser
-from django.db import models
 import uuid
+from django.db import models
+from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
 
 
-class User(models.Model):
+class User(AbstractUser):
+    user_id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    email = models.EmailField(unique=True, null=False)
+    phone_number = models.CharField(max_length=20)
+
+    password_hash = models.CharField(max_length=50)
+
     ROLES = [
         ('guest', 'guest'),
         ('admin', 'admin'),
         ('host', 'host'),
     ]
 
-    user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, db_index=True)
-    phone_number = models.CharField(max_length=20, null=True, blank=True)
-    role = models.CharField(max_length=10, choices=ROLES, default='guest')
+    role = models.CharField(max_length=20, choices=ROLES)
     created_at = models.DateTimeField(auto_now_add=True)
-    first_name = models.CharField(max_length=150, null=False, blank=False)
-    last_name = models.CharField(max_length=150, null=False, blank=False)
-    email = models.EmailField(unique=True, null=False, blank=False)
-    password = models.CharField(max_length=30, null=False, blank=False)
-
-    class Meta:
-        db_table = 'user'
-        indexes = [
-            models.Index(fields=['email']),
-        ]
-        constraints = [
-            models.UniqueConstraint(fields=['email'], name='unique_email'),
-        ]
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} ({self.email})"
-
-
+        return self.first_name
 
 class Conversation(models.Model):
-    conversation_id = models.UUIDField(primary_key=True, default=uuid.uuid4, db_index=True)
-    participants_id = models.ForeignKey(User, on_delete=models.CASCADE)
+    Conversation_id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    participants = models.ManyToManyField(User, related_name='conversation_participant')
     created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"conversation {self.conversation_id}"
     
 
 
-
 class Message(models.Model):
-    message_id = models.UUIDField(primary_key=True, default=uuid.uuid4, db_index=True)
-    sender_id = models.ForeignKey(User, on_delete=models.CASCADE)
-    message_body = models.TextField(null=False)
-    sent_at = models.DateTimeField(auto_now_add=True)
+    message_id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_message')
+    Conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='conersation_group')
 
-    def __str__(self):
-        return f"Message from {self.sender.email} at {self.sent_at}"
+    message_body = models.TextField(null=False, blank=False)
+    sent_at =  models.DateTimeField(auto_now_add=True)
+    
