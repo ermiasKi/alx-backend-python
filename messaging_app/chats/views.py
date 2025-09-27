@@ -10,6 +10,8 @@ from django.views.decorators.csrf import csrf_exempt
 from .pagination import LargeResultsSetPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from .filters import MessageFilter
+from .permissions import IsParticipantOfConversation
+from rest_framework.permissions import IsAuthenticated
 
 @csrf_exempt
 
@@ -34,6 +36,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
     pagination_class = LargeResultsSetPagination
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
 
     @action(detail=False, methods=['post'])
     def new_conversation(self, request):
@@ -56,13 +59,26 @@ class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
     pagination_class = LargeResultsSetPagination
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
     filter_backends = [DjangoFilterBackend]
     filter_class = MessageFilter
 
 
     @action(detail=False, methods=['post'])
     def send_message(self, request, pk=None):
+        queryset = Message.objects.filter(
+            conversation__participants=self.request.user
+        )
 
+        instance = self.get_object()
+        
+        # Check if user is the sender of the message
+        if instance.sender != request.user:
+            return Response(
+                {"error": "You can only edit your own messages"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        conversation_id = self.request.query_params.get('conversation_id')
         conversation = Conversation.objects.filter(pk=pk).first()
         if not conversation:
             return Response({"error":"conversation not found"}, status=status.HTTP_404_NOT_FOUND)
