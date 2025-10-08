@@ -1,0 +1,4 @@
+2025-10-08 23:05:32.304034 - User: AnonymousUser - Path: /
+2025-10-08 23:05:32.619317 - User: AnonymousUser - Path: /favicon.ico
+2025-10-08 23:05:53.763364 - User: AnonymousUser - Path: /login
+2025-10-08 23:05:53.798622 - User: AnonymousUser - Path: /favicon.ico
