@@ -37,6 +37,8 @@ class Message(models.Model):
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
+    edited_at = models.DateTimeField(auto_now=True)
+    edited_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='edited_messages')
     edited = models.BooleanField(default=False)
 
     pre_save.connect(lambda sender, instance, **kwargs: setattr(instance, 'edited', True) if instance.pk else None)
