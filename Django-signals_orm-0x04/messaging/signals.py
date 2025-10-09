@@ -1,5 +1,5 @@
 from .models import Message, Notification, User
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
 
 
@@ -14,3 +14,12 @@ def MessageHistory(sender, instance, created, **kwargs):
     if created:
         before_edit = instance.content
         MessageHistory.objects.create(instance=instance, before_edit=before_edit)
+
+
+@receiver(post_delete, sender=User)
+def DeleteUser(sender, instance, **kwargs):
+    message = Message.objects.filter(sender=instance) | Message.objects.filter(receiver=instance)
+    message.delete()
+
+    notification = Notification.objects.filter(user=instance)
+    notification.delete()

@@ -53,7 +53,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
 
-
+    cache_page = 60*1  # Cache for 1 minute
     @action(detail=False, methods=['post'])
     def send_message(self, request, pk=None):
 

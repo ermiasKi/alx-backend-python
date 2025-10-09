@@ -1,6 +1,6 @@
 import uuid
 from django.db import models
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, post_delete
 from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
@@ -22,6 +22,8 @@ class User(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLES)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    post_delete.connect(lambda sender, instance, **kwargs: print(f"User {instance.username} deleted"))
+
     def __str__(self):
         return self.first_name
 
@@ -40,6 +42,9 @@ class Message(models.Model):
     edited_at = models.DateTimeField(auto_now=True)
     edited_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='edited_messages')
     edited = models.BooleanField(default=False)
+    parent_message = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+    read = models.BooleanField(default=False)
+
 
     pre_save.connect(lambda sender, instance, **kwargs: setattr(instance, 'edited', True) if instance.pk else None)
     post_save.connect(lambda sender, instance, created, **kwargs: print(f"Message sent from {instance.sender} to {instance.receiver} at {instance.timestamp}"))
