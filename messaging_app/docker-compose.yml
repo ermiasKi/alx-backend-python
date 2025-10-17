@@ -1,35 +1,45 @@
+version: '3.8'
+
 services:
   db:
-    image: postgres:14
-    container_name: postgres_db
-    restart: always
+    image: mysql:8.0
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     ports:
-      - "5432:5432"
-
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   web:
     build: .
     container_name: django_web
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      sh -c "while ! nc -z db 3306; do sleep 1; done &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
     ports:
       - "8000:8000"
     volumes:
       - .:/app
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      DEBUG: '1'
+      DEBUG: ${DEBUG}
+      MYSQL_DB: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+
 volumes:
-  postgres_data:
+  mysql_data:
