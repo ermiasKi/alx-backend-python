@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Usage:
+#   export APP_IMAGE=ermiaskin/messaging-app:1.0
+#   ./kurbeScript
+
+APP_IMAGE="${APP_IMAGE:-ermiaskin/messaging-app:1.0}"
+NAMESPACE="${NAMESPACE:-default}"
+DEPLOYMENT_FILE="${DEPLOYMENT_FILE:-deployment.yaml}"
+SERVICE_FILE="${SERVICE_FILE:-service.yaml}"
+
+# Check minikube
+if ! command -v minikube >/dev/null 2>&1; then
+  echo "minikube not found. Install minikube first: https://minikube.sigs.k8s.io/docs/start/"
+  exit 1
+fi
+
+# Check kubectl
+if ! command -v kubectl >/dev/null 2>&1; then
+  echo "kubectl not found. Install kubectl: https://kubernetes.io/docs/tasks/tools/"
+  exit 1
+fi
+
+echo "Starting minikube (if not already running)..."
+minikube start --driver=docker
+
+echo "Enabling ingress and metrics-server addons..."
+minikube addons enable ingress
+minikube addons enable metrics-server
+
+echo "Verifying cluster..."
+kubectl cluster-info
+
+echo "Using app image: ${APP_IMAGE}"
+# Create or update deployment.yaml on the fly with the selected image (if placeholder present)
+if grep -q "__APP_IMAGE__" "${DEPLOYMENT_FILE}" 2>/dev/null; then
+  sed "s|__APP_IMAGE__|${APP_IMAGE}|g" "${DEPLOYMENT_FILE}" | kubectl apply -f -
+else
+  kubectl apply -f "${DEPLOYMENT_FILE}"
+fi
+
+kubectl apply -f "${SERVICE_FILE}"
+
+echo "Waiting for pods to be ready..."
+kubectl rollout status deployment/messaging-app-blue --timeout=120s || {
+  echo "Deployment may not be ready; check pods:"
+  kubectl get pods -o wide
+  exit 1
+}
+
+echo "Pods:"
+kubectl get pods -o wide -l app=messaging-app
+
+echo "You can view the service details:"
+kubectl get svc -l app=messaging-app
+
+echo ""
+echo "To access (if using minikube):"
+echo "  minikube service --url $(kubectl get svc messaging-app -o=jsonpath='{.metadata.name}' 2>/dev/null || echo messaging-app)"
+echo ""
+echo "kurbeScript finished."

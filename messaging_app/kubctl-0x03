@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DEPLOYMENT="${DEPLOYMENT:-messaging-app-blue}"
+NEW_IMAGE="${NEW_IMAGE:-yourdockerhubuser/messaging-app:2.0}"
+NAMESPACE="${NAMESPACE:-default}"
+
+echo "Updating deployment ${DEPLOYMENT} with image ${NEW_IMAGE}..."
+kubectl set image deployment/"${DEPLOYMENT}" messaging-app="${NEW_IMAGE}" --record
+
+echo "Monitoring rollout status..."
+kubectl rollout status deployment/"${DEPLOYMENT}" --timeout=180s
+
+echo "List pods:"
+kubectl get pods -l app=messaging-app -o wide
+
+# Continuous curl test to monitor downtime — 30 seconds of requests (adjust as needed)
+SVC_URL=$(minikube service --url messaging-app || true)
+if [ -n "${SVC_URL}" ]; then
+  TARGET="${SVC_URL}api/"
+  echo "Testing endpoint ${TARGET} for 20s to see if any errors occur..."
+  end=$((SECONDS+20))
+  while [ $SECONDS -lt $end ]; do
+    status=$(curl -s -o /dev/null -w "%{http_code}" "${TARGET}" || echo "000")
+    echo "$(date '+%H:%M:%S') -> ${status}"
+    sleep 1
+  done
+else
+  echo "Could not find service URL via minikube. Use 'minikube service messaging-app --url' to get URL."
+fi
+
+echo "Rolling update completed. Verify pods are running the new image:"
+kubectl get pods -l app=messaging-app -o wide
+kubectl describe deployment "${DEPLOYMENT}" | sed -n '1,120p'

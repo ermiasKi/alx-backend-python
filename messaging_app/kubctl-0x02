@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BLUE="${BLUE:-blue_deployment.yaml}"
+GREEN="${GREEN:-green_deployment.yaml}"
+SERVICE="${SERVICE:-kubeservice.yaml}"
+
+echo "Applying blue deployment..."
+kubectl apply -f "${BLUE}"
+
+echo "Applying green deployment..."
+kubectl apply -f "${GREEN}"
+
+echo "Applying service (initially routing to blue)..."
+kubectl apply -f "${SERVICE}"
+
+echo "Waiting for pods..."
+kubectl wait --for=condition=available --timeout=120s deployment/messaging-app-blue || true
+kubectl wait --for=condition=available --timeout=120s deployment/messaging-app-green || true
+
+echo "Pods:"
+kubectl get pods -l app=messaging-app -o wide
+
+echo "Fetching logs for green pods (if any):"
+kubectl get pods -l app=messaging-app,version=green -o name | xargs -r -n1 kubectl logs --tail=50
+
+echo ""
+echo "If green pods look healthy, you can switch traffic by patching the service selector:"
+echo "kubectl patch service messaging-app -p '{\"spec\": {\"selector\":{\"app\":\"messaging-app\",\"version\":\"green\"}}}'"
